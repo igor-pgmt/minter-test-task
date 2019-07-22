@@ -1,0 +1,45 @@
+version: "3"
+
+services:
+  pg:
+    build: pg
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=1000"
+      - "-c"
+      - "shared_buffers=1GB"
+
+  pgbouncer:
+    build: pgbouncer
+    depends_on:
+      - pg
+    links:
+      - pg
+    ports:
+      - 6432:6432
+
+  minter:
+    build: .
+    depends_on:
+      - pgbouncer
+      - pg
+    links:
+      - pgbouncer
+    ports:
+      - 8080:8080
+    command: ["./wait-for-it.sh", "postgres:5432", "--", "./wait-for-it.sh", "pgbouncer:6432", "--", "./minter-test-task"]
+    environment:
+      domainName: 'minter-node-1.mainnet.minter.network'
+      poolCap: 1000
+      minBlock: 1
+      maxBlock: 1000000
+      responseSize: 3000
+      dbHost: 'pgbouncer'
+      dbPort: '6432'
+      dbName: 'test1'
+      dbUser: 'user1'
+      dbPass: '777'
+      clean: 'TRUE'
+      continueParsing: 'FALSE'
+      skipParsing: 'FALSE'
